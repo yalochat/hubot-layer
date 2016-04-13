@@ -2,7 +2,7 @@
   "name": "hubot-layer",
   "version": "0.1.0",
   "description": "This is a hubot adapter to use with Layer",
-  "main": "./index",
+  "main": "./src/layer",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
