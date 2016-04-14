@@ -1,5 +1,5 @@
 {Robot, Adapter, EnterMessage, TextMessage} = require 'hubot'
-Layer = require 'layer-api'
+LayerAPI = require 'layer-api'
 
 class Layer extends Adapter
 
@@ -8,7 +8,7 @@ class Layer extends Adapter
 
     @token = process.env.LAYER_TOKEN
     @appId = process.env.LAYER_APP_ID
-    @botOperator process.env.BOT_OPERATOR
+    @botOperator = process.env.BOT_OPERATOR
     @logger = @robot.logger
 
     @logger.info 'Layer Bot: Adapter loaded :)'
@@ -20,7 +20,6 @@ class Layer extends Adapter
       id: id
       name: userId
       conversation: conversationId
-
 
     next @robot.brain.userForId id user
 
@@ -36,15 +35,13 @@ class Layer extends Adapter
     _conversationId = message.conversation.id
     _userId = message.conversation.sender.user_id
 
-    @_createUser _userId, _conversationId, (user) =>
-      for part in message.parts
+    @_createUser _userId, _conversationId, (user) ->
+      for part of message.parts
         if part.mime_type is 'text/plain'
           message = new TextMessage user, part.body.trim(), user.id
-
           @receive(message) if message?
 
   _sendMessage: (envelope, message) ->
-
     data =
       sender:
         user_id: @botOperator
@@ -55,12 +52,10 @@ class Layer extends Adapter
         text: message,
         sound: 'chime.aiff'
 
-    # Get the conversation
-    Layer.messages.send envelope.user.conversationId, data, (error, response) ->
-      return error if error
+    @layer.messages.send envelope.user.conversationId, data, (error, response) ->
+      return @logger.info error if error
 
       @logger.info response.statusCode
-
 
   send: (envelope, strings...) ->
     @_sendMsg envelope, strings.join '\n'
@@ -81,8 +76,7 @@ class Layer extends Adapter
     unless @botOperator
       @emit 'error', new Error 'The environment variable "BOT_OPERATOR" is required'
 
-    @layer = new Layer token: @token, appId: @appId
-
+    @layer = new LayerAPI token: @token, appId: @appId
 
     @robot.router.post '/', (req, res) ->
       event = event.type
