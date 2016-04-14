@@ -35,7 +35,7 @@ class Layer extends Adapter
     _conversationId = message.conversation.id
     _userId = message.conversation.sender.user_id
 
-    @_createUser _userId, _conversationId, (user) ->
+    @_createUser _userId, _conversationId, (user) =>
       for part of message.parts
         if part.mime_type is 'text/plain'
           message = new TextMessage user, part.body.trim(), user.id
@@ -52,7 +52,7 @@ class Layer extends Adapter
         text: message,
         sound: 'chime.aiff'
 
-    @layer.messages.send envelope.user.conversationId, data, (error, response) ->
+    @layer.messages.send envelope.user.conversationId, data, (error, response) =>
       return @logger.info error if error
 
       @logger.info response.statusCode
