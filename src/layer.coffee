@@ -68,7 +68,7 @@ class Layer extends Adapter
 
   run: ->
     unless @token
-      @emit 'error', new Error 'The environment variable "LAYER_BEARER_TOKEN" is required.'
+      @emit 'error', new Error 'The environment variable "LAYER_TOKEN" is required.'
 
     unless @appId
       @emit 'error', new Error 'The environment variable "LAYER_APP_ID" is required.'
@@ -79,7 +79,9 @@ class Layer extends Adapter
     @layer = new LayerAPI token: @token, appId: @appId
 
     @robot.router.post '/', (req, res) ->
-      event = event.type
+      return unless req.body.event?.type?
+
+      event = req.body.event.type
 
       switch event
         when 'message.sent'
