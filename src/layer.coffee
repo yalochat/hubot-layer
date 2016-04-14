@@ -78,17 +78,20 @@ class Layer extends Adapter
 
     @layer = new LayerAPI token: @token, appId: @appId
 
-    @robot.router.post '/', (req, res) ->
-      return unless req.body.event?.type?
+    @robot.router.post '/', (req, res) =>
+      return res.send 400 unless req.body.event?.type?
 
-      event = req.body.event.type
+      data = req.body
+      event = data.event.type
 
       switch event
         when 'message.sent'
-          _processMessage event.message
+          @_processMessage data.message
           break
         when 'conversation.created'
-          _joinConversation event.conversation
+          @_joinConversation data.conversation
+
+      res.send 200
 
     # Tell Hubot we're connected so it can load scripts
     @emit 'connected'
