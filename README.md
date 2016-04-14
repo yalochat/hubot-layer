@@ -57,4 +57,4 @@ Copyright &copy; Yalo MIT License; see LICENSE for further details.
 
 ----
 
-Created with :heart: by [Yalo](http;//yalochat.com)
+Created with :heart: by [Yalo](http://yalochat.com)
