@@ -15,7 +15,10 @@
     "adapter",
     "layer"
   ],
-  "author": "Yoel Monzon <yoelfme@hotmail.com>",
+  "author": "Yalo <eng@yalochat.com>",
+  "contributors": [
+    "Yoel Monzon <yoel@yalochat.com>"
+  ],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/yalochat/hubot-layer/issues"
@@ -26,7 +29,6 @@
     "hubot": "^2.18.0"
   },
   "dependencies": {
-    "layer-api": "^2.3.0",
-    "lodash": "^4.10.0"
+    "layer-api": "^2.3.0"
   }
 }
