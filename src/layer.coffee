@@ -90,6 +90,8 @@ class Layer extends Adapter
         when 'conversation.created'
           _joinConversation event.conversation
 
+    # Tell Hubot we're connected so it can load scripts
+    @emit 'connected'
 
     @logger.info 'Layer Bot is running'
 
