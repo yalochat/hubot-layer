@@ -58,13 +58,13 @@ class Layer extends Adapter
       @logger.info response.statusCode
 
   send: (envelope, strings...) ->
-    @_sendMsg envelope, strings.join '\n'
+    @_sendMessage envelope, strings.join '\n'
 
   reply: (envelope, strings...) ->
     message = strings.join '\n'
     user = envelope.user.name
 
-    @_sendMsg envelope, "#{user}:#{message}"
+    @_sendMessage envelope, "#{user}:#{message}"
 
   run: ->
     unless @token
