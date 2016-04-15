@@ -1,4 +1,4 @@
-{Robot,Adapter,EnterMessage,TextMessage,User} = prequire 'hubot'
+{Robot,Adapter,EnterMessage,TextMessage,User} = require 'hubot'
 LayerAPI = require 'layer-api'
 
 class Layer extends Adapter
