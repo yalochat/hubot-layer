@@ -21,19 +21,25 @@ class Layer extends Adapter
       name: userId
       conversation: conversationId
 
-    next @robot.brain.userForId id user
+    @logger.info 'A new user has been created'
+
+    next @robot.brain.userForId id, user
 
   _joinConversation: (conversation) ->
     return unless conversation.id?
 
-    @logger.info  "A new conversation has been created, ID: #{conversation.id}"
-    @receive new EnterMessage conversation
+    user = conversation.metadata.user
+    user.typeConversation = conversation.metadata.type
+    user.room = conversation.id
 
-  _processMessage = (message) ->
+    @logger.info  "A new conversation has been created, ID: #{conversation.id}"
+    @receive new EnterMessage user, null, null
+
+  _processMessage: (message) ->
     return unless message.conversation?
 
     _conversationId = message.conversation.id
-    _userId = message.conversation.sender.user_id
+    _userId = message.sender.user_id
 
     @_createUser _userId, _conversationId, (user) =>
       for part of message.parts
@@ -52,17 +58,20 @@ class Layer extends Adapter
         text: message,
         sound: 'chime.aiff'
 
-    @layer.messages.send envelope.user.conversationId, data, (error, response) =>
+    conversationId = envelope.room
+
+    @layer.messages.send conversationId, data, (error, response) =>
       return @logger.info error if error
 
-      @logger.info response.statusCode
+      @logger.info "The message has been send to conversation: #{response.body.conversation.id}"
 
   send: (envelope, strings...) ->
+
     @_sendMessage envelope, strings.join '\n'
 
   reply: (envelope, strings...) ->
     message = strings.join '\n'
-    user = envelope.user.name
+    user = envelope.user.nickname
 
     @_sendMessage envelope, "#{user}:#{message}"
 
