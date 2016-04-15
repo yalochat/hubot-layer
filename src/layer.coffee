@@ -29,7 +29,7 @@ class Layer extends Adapter
 
     _conversationId = conversation.id
 
-    @_createUser _userId, _conversationId, (user) =>
+    @_createUser _conversationId, _conversationId, (user) =>
       newConversation = new EnterMessage conversation, null, null
       @receive(newConversation) if newConversation?
       @logger.info  "A new conversation has been created, ID: #{conversation.id}"
