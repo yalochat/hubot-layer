@@ -27,11 +27,10 @@ class Layer extends Adapter
   _joinConversation: (conversation) ->
     return unless conversation.id?
 
-    _userId = conversation.metadata.user.id
     _conversationId = conversation.id
 
-    @_createUser _userId, _conversationId, (user) =>
-      newConversation = new EnterMessage user, null, user.id
+    @_createUser _conversationId, _conversationId, (user) =>
+      newConversation = new EnterMessage conversation, null, null
       @receive(newConversation) if newConversation?
       @logger.info  "A new conversation has been created, ID: #{conversation.id}"
 
