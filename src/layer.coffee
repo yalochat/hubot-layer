@@ -1,10 +1,10 @@
-{Robot, Adapter, EnterMessage, TextMessage} = require 'hubot'
+{Robot,Adapter,EnterMessage,TextMessage,User} = prequire 'hubot'
 LayerAPI = require 'layer-api'
 
 class Layer extends Adapter
 
-  constructor: (@robot) ->
-    super @robot
+  constructor: (robot) ->
+    super robot
 
     @token = process.env.LAYER_TOKEN
     @appId = process.env.LAYER_APP_ID
@@ -17,9 +17,8 @@ class Layer extends Adapter
     id = "#{userId}:#{conversationId}"
 
     user =
-      id: id
       name: userId
-      conversation: conversationId
+      room: conversationId
 
     @logger.info 'A new user has been created'
 
@@ -28,12 +27,14 @@ class Layer extends Adapter
   _joinConversation: (conversation) ->
     return unless conversation.id?
 
-    user = conversation.metadata.user
-    user.typeConversation = conversation.metadata.type
-    user.room = conversation.id
+    _userId = conversation.metadata.user.id
+    _conversationId = conversation.id
 
-    @logger.info  "A new conversation has been created, ID: #{conversation.id}"
-    @receive new EnterMessage user, null, null
+    @_createUser _userId, _conversationId, (user) =>
+      newConversation = new EnterMessage user, null, user.id
+      @receive(newConversation) if newConversation?
+      @logger.info  "A new conversation has been created, ID: #{conversation.id}"
+
 
   _processMessage: (message) ->
     return unless message.conversation?
@@ -42,7 +43,7 @@ class Layer extends Adapter
     _userId = message.sender.user_id
 
     @_createUser _userId, _conversationId, (user) =>
-      for part of message.parts
+      for part in message.parts
         if part.mime_type is 'text/plain'
           message = new TextMessage user, part.body.trim(), user.id
           @receive(message) if message?
@@ -99,6 +100,7 @@ class Layer extends Adapter
           break
         when 'conversation.created'
           @_joinConversation data.conversation
+          break
 
       res.send 200
 
