@@ -41,6 +41,9 @@ class Layer extends Adapter
     _conversationId = message.conversation.id
     _userId = message.sender.user_id
 
+    # Ignore our own messages
+    return if _userId == @botOperator
+
     @_createUser _userId, _conversationId, (user) =>
       for part in message.parts
         if part.mime_type is 'text/plain'
