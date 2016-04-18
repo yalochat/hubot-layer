@@ -29,11 +29,14 @@ class Layer extends Adapter
 
     _conversationId = conversation.id
 
-    @_createUser _conversationId, _conversationId, (user) =>
-      newConversation = new EnterMessage conversation, null, null
-      @receive(newConversation) if newConversation?
-      @logger.info  "A new conversation has been created, ID: #{conversation.id}"
+    message:
+      room: _conversationId
 
+    newConversation = new EnterMessage message, null, null
+
+    if newConversation?
+      @logger.info  "A new conversation has been created, ID: #{conversation.id}"
+      @receive(newConversation) if newConversation?
 
   _processMessage: (message) ->
     return unless message.conversation?
@@ -69,7 +72,6 @@ class Layer extends Adapter
       @logger.info "The message has been send to conversation: #{response.body.conversation.id}"
 
   send: (envelope, strings...) ->
-
     @_sendMessage envelope, strings.join '\n'
 
   reply: (envelope, strings...) ->
@@ -101,7 +103,6 @@ class Layer extends Adapter
           @_processMessage data.message
           break
         when 'conversation.created'
-          @_joinConversation data.conversation
           break
 
       res.send 200
