@@ -17,10 +17,12 @@ class Layer extends Adapter
     id = "#{userId}:#{conversationId}"
 
     user =
+      id: id
       name: userId
       room: conversationId
 
-    @logger.info 'A new user has been created'
+    @logger.info 'Trying to create a new user with data:'
+    @logger.info user
 
     next @robot.brain.userForId id, user
 
@@ -48,6 +50,8 @@ class Layer extends Adapter
     return if _userId == @botOperator
 
     @_createUser _userId, _conversationId, (user) =>
+      @logger.info "A new user with the id: '#{user.id}' has been created"
+
       for part in message.parts
         if part.mime_type is 'text/plain'
           message = new TextMessage user, part.body.trim(), user.id
@@ -65,6 +69,8 @@ class Layer extends Adapter
         sound: 'chime.aiff'
 
     conversationId = envelope.room
+
+    @logger.info "Trying to send a message to conversation: '#{conversationId}"
 
     @layer.messages.send conversationId, data, (error, response) =>
       return @logger.info error if error
@@ -97,6 +103,8 @@ class Layer extends Adapter
 
       data = req.body
       event = data.event.type
+
+      @logger.info "A new event of type: '#{event}' has been received"
 
       switch event
         when 'message.sent'
