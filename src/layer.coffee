@@ -20,6 +20,7 @@ class Layer extends Adapter
       id: id
       name: userId
       room: conversationId
+      nickname: userId
 
     @logger.info 'Trying to create a new user with data:'
     @logger.info user
