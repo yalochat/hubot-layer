@@ -2,6 +2,7 @@
 LayerAPI = require 'layer-api'
 
 class Layer extends Adapter
+  @EVENTS: ['message.sent', 'conversation.created']
 
   constructor: (robot) ->
     super robot
@@ -20,6 +21,7 @@ class Layer extends Adapter
 
   _getUser: (id) ->
     # Get user for the brain of robot
+    @logger.info "Trying to get information of user in the brain of robot with ID: #{id}"
     @robot.brain.userForId id
 
   _createUser: (userId, conversationId, metadata, next) ->
@@ -58,7 +60,7 @@ class Layer extends Adapter
     # Get user from the robot brain
     user = @_getUser _id
 
-    if user
+    if user.metadata?
       @logger.info "Conversation #{_conversationId} already receive"
 
       # Create a instance of EnterMessage for conversation
@@ -90,12 +92,12 @@ class Layer extends Adapter
     _id = @_makeId _userId, _conversationId
 
     # Ignore our own messages
-    return if _userId == @botOperator
+    return @logger.info 'Ignore own message' if _userId is @botOperator
 
     # Get user from the robot brain
     user = @_getUser _id
 
-    if user
+    if user.metadata?
       @logger.info "The user already exists"
 
       # Iterate parts of message
@@ -150,7 +152,9 @@ class Layer extends Adapter
 
   reply: (envelope, strings...) ->
     message = strings.join '\n'
-    user = envelope.user.nickname
+
+    userInfo = envelope.user.metadata.user
+    user = userInfo.nickname or userInfo.chatProfile
 
     @_sendMessage envelope, "#{user}:#{message}"
 
@@ -180,6 +184,9 @@ class Layer extends Adapter
 
       # Get event type
       event = data.event.type
+
+      # Validate if the event received is in EVENTS
+      return res.send 400 if event not in Layer.EVENTS
 
       @logger.info "A new event of type: '#{event}' has been received"
 
