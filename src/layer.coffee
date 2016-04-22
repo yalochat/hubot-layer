@@ -3,6 +3,7 @@ LayerAPI = require 'layer-api'
 
 class Layer extends Adapter
   @EVENTS: ['message.sent', 'conversation.created']
+  @TYPEBOTS: ['store', 'category', 'general']
 
   constructor: (robot) ->
     super robot
@@ -10,39 +11,71 @@ class Layer extends Adapter
     # Set instance variables
     @token = process.env.LAYER_TOKEN
     @appId = process.env.LAYER_APP_ID
-    @botOperator = process.env.BOT_OPERATOR
+    @operatorBot = process.env.OPERATOR_BOT
+    @typeBot = process.env.TYPE_BOT or 'general'
     @logger = @robot.logger
 
     @logger.info 'Layer Bot: Adapter loaded :)'
-
-  _makeId: (userId, conversationId) ->
-    # Make id for user to add a brain of robot
-    "#{userId}:#{conversationId}"
 
   _getUser: (id) ->
     # Get user for the brain of robot
     @logger.info "Trying to get information of user in the brain of robot with ID: #{id}"
     @robot.brain.userForId id
 
-  _createUser: (userId, conversationId, metadata, next) ->
+  _createUser: (userId, conversationId, conversation, next) ->
 
     # Generate ID for User in the brain
-    id = @_makeId userId, conversationId
+    id = conversationId
 
     # Set default metadata if is null
     metadata = metadata or {}
 
     # Object that will be stored in the brain of robot
     user =
-      name: userId
       room: conversationId
-      metadata: metadata
+      conversation: conversation
 
     @logger.info 'Trying to create a new user with data:'
     @logger.info user
 
     # Create a new user in robot brain and call callback
     next @robot.brain.userForId id, user
+
+  _validateConversation: (conversation) ->
+    switch @typeBot
+      when 'store'
+        return @operatorBot in conversation.participants
+        break
+      when 'category'
+        return false
+        break
+      when 'general'
+        return true
+        break
+
+  _validateMessage: (message) ->
+    switch @typeBot
+      when 'store'
+        return @operatorBot of message.recipient_status
+        break
+      when 'category'
+        return false
+        break
+      when 'general'
+        return true
+        break
+
+  _validateUser: (conversation, user) ->
+    @logger.info 'Validating user...'
+
+    userInfo = conversation.metadata.user
+    userConversation = userInfo.chatProfile or userInfo.id
+
+    isFinalUser = user is userConversation
+
+    if isFinalUser then @logger.info 'Is a final user' else @logger.info 'Not is a final user'
+
+    isFinalUser
 
   _processConversation: (conversation) ->
     # If id conversation is not set, return function
@@ -51,16 +84,18 @@ class Layer extends Adapter
     # If metadata, user or chat profile are not set, return function
     return unless conversation.metadata?.user?.chatProfile?
 
+    # Validate conversation with type of bot
+    return unless @_validateConversation conversation
+
     # Get data used to build a new user
     _conversationId = conversation.id
     _userId = conversation.metadata.user.chatProfile
-    _metadata = conversation.metadata
-    _id = @_makeId _userId, _conversationId
+    _id = _conversationId
 
     # Get user from the robot brain
     user = @_getUser _id
 
-    if user.metadata?
+    if user.conversation?.metadata?
       @logger.info "Conversation #{_conversationId} already receive"
 
       # Create a instance of EnterMessage for conversation
@@ -68,10 +103,10 @@ class Layer extends Adapter
 
       @_sendConversation message
     else
-      @logger.info "New conversation has been received"
+      @logger.info 'New conversation has been received'
 
       # Create the new user
-      @_createUser _userId, _conversationId, _metadata, (user) =>
+      @_createUser _userId, _conversationId, conversation, (user) =>
         message = new EnterMessage user, null, null
 
         @_sendConversation message
@@ -84,21 +119,28 @@ class Layer extends Adapter
       @receive message
 
   _processMessage: (message) ->
+    # Not proccess if message has not the conversation key
     return unless message.conversation?
+
+    # Validate message with type of bot
+    return unless @_validateMessage message
 
     # Get data used to build a new user
     _conversationId = message.conversation.id
     _userId = message.sender.user_id
-    _id = @_makeId _userId, _conversationId
+    _id = _conversationId
 
     # Ignore our own messages
-    return @logger.info 'Ignore own message' if _userId is @botOperator
+    return @logger.info 'Ignore own message' if _userId is @operatorBot
 
     # Get user from the robot brain
     user = @_getUser _id
 
-    if user.metadata?
+    if user.conversation?.metadata?
       @logger.info "The user already exists"
+
+      # Validate if sender message is a final user
+      return unless @_validateUser user.conversation, _userId
 
       # Iterate parts of message
       @_sendMessages user, message
@@ -108,14 +150,20 @@ class Layer extends Adapter
         return @logger.info err if err
 
         # Get metadata of conversation
-        _metadata = res.body.metadata or {}
+        conversation = res.body
 
-        @logger.info "Conversation #{_conversationId} has been obtained, metada:"
-        @logger.info _metadata
+        # Return if does not an object as a conversation
+        return unless conversation.id?
+
+        @logger.info "Conversation #{_conversationId} has been obtained, metadata:"
+        @logger.info conversation.metadata
 
         # Create the new user
-        @_createUser _userId, _conversationId, _metadata, (user) =>
+        @_createUser _userId, _conversationId, res.body, (user) =>
           @logger.info "A new user with the id: #{_id} has been created"
+
+          # Validate if sender message is a final user
+          return unless @_validateUser user.conversation, _userId
 
           @_sendMessages user, message
 
@@ -129,7 +177,7 @@ class Layer extends Adapter
     # Data used to send a message to Layer
     data =
       sender:
-        user_id: @botOperator
+        user_id: @operatorBot
       parts: [
         (body: message, mime_type: 'text/plain')
       ],
@@ -145,7 +193,7 @@ class Layer extends Adapter
     @layer.messages.send conversationId, data, (error, response) =>
       return @logger.info error if error
 
-      @logger.info "The message has been send to conversation: #{response.body.conversation.id}"
+      @logger.info "The message has been sent to conversation: #{response.body.conversation.id}"
 
   send: (envelope, strings...) ->
     @_sendMessage envelope, strings.join '\n'
@@ -153,7 +201,7 @@ class Layer extends Adapter
   reply: (envelope, strings...) ->
     message = strings.join '\n'
 
-    userInfo = envelope.user.metadata.user
+    userInfo = envelope.user.conversation.metadata.user
     user = userInfo.nickname or userInfo.chatProfile
 
     @_sendMessage envelope, "#{user}:#{message}"
@@ -167,9 +215,13 @@ class Layer extends Adapter
     unless @appId
       @emit 'error', new Error 'The environment variable "LAYER_APP_ID" is required.'
 
-    # Validate if botOperator has been setted
-    unless @botOperator
-      @emit 'error', new Error 'The environment variable "BOT_OPERATOR" is required'
+    # Validate if operatorBot has been setted
+    unless @operatorBot
+      @emit 'error', new Error 'The environment variable "OPERATOR_BOT" is required'
+
+    # Validate type of bot
+    if @typeBot not in Layer.TYPEBOTS
+      @emit 'error', new Error 'The type bot is not valid'
 
     # Initialize client of Layer Platform
     @layer = new LayerAPI token: @token, appId: @appId
