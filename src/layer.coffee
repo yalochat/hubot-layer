@@ -42,6 +42,8 @@ class Layer extends Adapter
     next @robot.brain.userForId id, user
 
   _validateConversation: (conversation) ->
+    @logger.info 'Validating conversation...'
+
     switch @typeBot
       when 'store'
         return @operatorBot in conversation.participants
@@ -69,7 +71,7 @@ class Layer extends Adapter
     @logger.info 'Validating user...'
 
     userInfo = conversation.metadata.user
-    userConversation = userInfo.chatProfile or userInfo.id
+    userConversation = userInfo.id or userInfo.nickname
 
     isFinalUser = user is userConversation
 
@@ -82,14 +84,14 @@ class Layer extends Adapter
     return unless conversation.id?
 
     # If metadata, user or chat profile are not set, return function
-    return unless conversation.metadata?.user?.chatProfile?
+    return unless conversation.metadata?.user?.id?
 
     # Validate conversation with type of bot
     return unless @_validateConversation conversation
 
     # Get data used to build a new user
     _conversationId = conversation.id
-    _userId = conversation.metadata.user.chatProfile
+    _userId = conversation.metadata.user.id
     _id = _conversationId
 
     # Get user from the robot brain
@@ -202,9 +204,9 @@ class Layer extends Adapter
     message = strings.join '\n'
 
     userInfo = envelope.user.conversation.metadata.user
-    user = userInfo.nickname or userInfo.chatProfile
+    user = userInfo.nickname or userInfo.id
 
-    @_sendMessage envelope, "#{user}:#{message}"
+    @_sendMessage envelope, "#{user}: #{message}"
 
   run: ->
     # Validate if token has been setted
