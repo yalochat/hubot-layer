@@ -1,6 +1,6 @@
 {
   "name": "hubot-layer",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "This is a hubot adapter to use with Layer",
   "main": "./src/layer",
   "scripts": {
