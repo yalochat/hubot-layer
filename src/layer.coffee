@@ -90,21 +90,16 @@ class Layer extends Adapter
     # If id conversation is not set, return function
     return unless conversation.id?
 
-    # If metadata, user or chat profile are not set, return function
-    return unless conversation.metadata?.user?.id?
-
     # Validate conversation with type of bot
     return unless @_validateConversation conversation
 
     # Get data used to build a new user
     _conversationId = conversation.id
-    _userId = conversation.metadata.user.id
-    _id = _conversationId
 
     # Get user from the robot brain
-    user = @_getUser _id
+    user = @_getUser _conversationId
 
-    if user.conversation?.metadata?
+    if user.conversation?.metadata?.user?
       @logger.info "Conversation #{_conversationId} already receive"
 
       # Create a instance of EnterMessage for conversation
@@ -115,13 +110,28 @@ class Layer extends Adapter
     else
       @logger.info 'New conversation has been received'
 
-      # Create the new user
-      @_createUser _userId, _conversationId, conversation, (user) =>
-        # Create a instance of EnterMessage for conversation
-        message = new EnterMessage user, null, null
+      # Make request to get metadata of conversation
+      @layer.conversations.get _conversationId, (err, res) =>
+        return @logger.info err if err
 
-        # Send the message to robot, in the listener 'enter'
-        @_sendConversation message
+        # Get metadata of conversation
+        conversation = res.body
+
+        # Return if does not an object as a conversation
+        return unless conversation.id?
+
+        @logger.info "Conversation #{_conversationId} has been obtained, metadata:"
+        @logger.info conversation.metadata
+
+        _userId = conversation.metadata.user.id
+
+        # Create the new user
+        @_createUser _userId, _conversationId, conversation, (user) =>
+          # Create a instance of EnterMessage for conversation
+          message = new EnterMessage user, null, null
+
+          # Send the message to robot, in the listener 'enter'
+          @_sendConversation message
 
   _sendConversation: (message) ->
     # Send only if message is not null
@@ -140,15 +150,14 @@ class Layer extends Adapter
     # Get data used to build a new user
     _conversationId = message.conversation.id
     _userId = message.sender.user_id
-    _id = _conversationId
 
     # Ignore our own messages
     return @logger.info 'Ignore own message' if _userId is @operatorBot
 
     # Get user from the robot brain
-    user = @_getUser _id
+    user = @_getUser _conversationId
 
-    if user.conversation?.metadata?
+    if user.conversation?.metadata?.user?
       @logger.info "The user already exists"
 
       # Validate if sender message is a final user
@@ -172,7 +181,7 @@ class Layer extends Adapter
 
         # Create the new user
         @_createUser _userId, _conversationId, res.body, (user) =>
-          @logger.info "A new user with the id: #{_id} has been created"
+          @logger.info "A new user with the id: #{_conversationId} has been created"
 
           # Validate if sender message is a final user
           return unless @_validateUser user.conversation, _userId
@@ -264,6 +273,7 @@ class Layer extends Adapter
           @_processMessage data.message
           break
         when 'conversation.created'
+          @logger.info data.conversation
           @_processConversation data.conversation
           break
 
