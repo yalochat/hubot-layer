@@ -2,7 +2,10 @@
 LayerAPI = require 'layer-api'
 
 class Layer extends Adapter
+  # Events processed by the adapter
   @EVENTS: ['message.sent', 'conversation.created']
+
+  # Typo bots allowed by the adapter
   @TYPEBOTS: ['store', 'category', 'general']
 
   constructor: (robot) ->
@@ -56,6 +59,8 @@ class Layer extends Adapter
         break
 
   _validateMessage: (message) ->
+    @logger.info 'Validating message...'
+
     switch @typeBot
       when 'store'
         return @operatorBot of message.recipient_status
@@ -70,9 +75,11 @@ class Layer extends Adapter
   _validateUser: (conversation, user) ->
     @logger.info 'Validating user...'
 
+    # Get user info
     userInfo = conversation.metadata.user
     userConversation = userInfo.id or userInfo.nickname
 
+    # If user is in the metada of conversation, is a final user
     isFinalUser = user is userConversation
 
     if isFinalUser then @logger.info 'Is a final user' else @logger.info 'Not is a final user'
@@ -103,14 +110,17 @@ class Layer extends Adapter
       # Create a instance of EnterMessage for conversation
       message = new EnterMessage user, null, null
 
+      # Send the message to robot, in the listener 'enter'
       @_sendConversation message
     else
       @logger.info 'New conversation has been received'
 
       # Create the new user
       @_createUser _userId, _conversationId, conversation, (user) =>
+        # Create a instance of EnterMessage for conversation
         message = new EnterMessage user, null, null
 
+        # Send the message to robot, in the listener 'enter'
         @_sendConversation message
 
   _sendConversation: (message) ->
@@ -187,6 +197,7 @@ class Layer extends Adapter
         text: message,
         sound: 'chime.aiff'
 
+    # Get the conversation id from the user
     conversationId = envelope.room
 
     @logger.info "Trying to send a message to conversation: '#{conversationId}"
@@ -198,14 +209,17 @@ class Layer extends Adapter
       @logger.info "The message has been sent to conversation: #{response.body.conversation.id}"
 
   send: (envelope, strings...) ->
+    # Send a message to user
     @_sendMessage envelope, strings.join '\n'
 
   reply: (envelope, strings...) ->
     message = strings.join '\n'
 
+    # Get user info from the metadata
     userInfo = envelope.user.conversation.metadata.user
     user = userInfo.nickname or userInfo.id
 
+    # Reply a message to user
     @_sendMessage envelope, "#{user}: #{message}"
 
   run: ->
