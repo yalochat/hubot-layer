@@ -253,6 +253,9 @@ class Layer extends Adapter
 
     # Webhook used to listen income requests
     @robot.router.post '/', (req, res) =>
+      @logger.info 'Data received:'
+      @logger.info req.body
+
       # Return bad request if event object or event.type value is not set
       return res.send 400 unless req.body.event?.type?
 
